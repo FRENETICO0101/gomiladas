@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+.DS_Store
+.git
+.gitignore
+server/.env
+server/data/*.log
+server/data/*.tmp
+server/data/*.bak
+server/data/orders.json.lock
+server/data/customers.json.lock
+web/node_modules
+web/dist

@@ -1,0 +1,30 @@
+# Node
+node_modules/
+**/node_modules/
+
+# Builds
+web/dist/
+
+# Environment
+.env
+**/.env
+server/.env
+
+# Data (orders, customers, WhatsApp session)
+server/data/
+server/.wwebjs_auth/
+server/.wwebjs_cache/
+
+# Logs and temp
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tmp
+*.bak
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
