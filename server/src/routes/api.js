@@ -4,6 +4,7 @@ import { menu } from '../menu.js';
 import { config } from '../config.js';
 import { sendPromotionToAll } from '../scheduler.js';
 import { genOrderId } from '../ids.js';
+import { getClient } from '../whatsappBot.js';
 
 export const api = express.Router();
 
@@ -53,6 +54,22 @@ api.post('/orders/:id/status', async (req, res) => {
     if (!['new', 'preparing', 'done'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
     const updated = await ordersRepo.updateStatus(req.params.id, status);
     req.app.get('io').emit('orders:update', { type: 'updated', order: updated });
+    // Notify customer via WhatsApp when the order is ready
+    if (status === 'done' && updated?.customer?.phone) {
+      const client = getClient();
+      if (client) {
+        const digits = String(updated.customer.phone).replace(/\D/g, '');
+        const chatId = `${digits}@c.us`;
+        const customerName = updated.customer.name || 'cliente';
+        const totalTxt = typeof updated.total === 'number' ? ` — Total: $${updated.total.toFixed(2)}` : '';
+        const text = `Hola ${customerName}, tu pedido #${updated.id} está listo${totalTxt}.\nResponde este mensaje para coordinar la entrega. ¡Gracias por tu compra!`;
+        try {
+          await client.sendMessage(chatId, text);
+        } catch (e) {
+          console.error('No se pudo notificar por WhatsApp:', e?.message || e);
+        }
+      }
+    }
     res.json(updated);
   } catch (e) {
     res.status(404).json({ error: e.message });
