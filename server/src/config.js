@@ -29,4 +29,5 @@ export const config = {
   WEB_PORT: DEFAULT_WEB_PORT,
   PUBLIC_BASE_URL,
   PUBLIC_ORDER_URL: `${PUBLIC_BASE_URL}/order`,
+  WHATSAPP_COUNTRY_CODE: process.env.WHATSAPP_COUNTRY_CODE || '52',
 };

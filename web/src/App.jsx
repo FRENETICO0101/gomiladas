@@ -70,6 +70,8 @@ function OrderCard({ order, onChangeStatus, onDelete }) {
             {order.status !== 'new' && <button onClick={() => onChangeStatus(order.id, 'new')}>Nuevo</button>}
             {order.status !== 'preparing' && <button onClick={() => onChangeStatus(order.id, 'preparing')}>Preparando</button>}
             {order.status !== 'done' && <button onClick={() => onChangeStatus(order.id, 'done')}>Listo</button>}
+            {/* Reenviar notificación manualmente (visible siempre) */}
+            <button onClick={() => order._onResend?.(order.id)} title="Reenviar notificación por WhatsApp">Reenviar aviso</button>
           </>
         ) : (
           <button onClick={() => onDelete(order.id)} style={{ background:'#3a1f1f', borderColor:'#5a2a2a' }}>Eliminar</button>
@@ -121,6 +123,16 @@ export default function App() {
     setOrders(prev => prev.filter(o => o.id !== id));
   }
 
+  async function onResend(id) {
+    try {
+      await axios.post(`${API_BASE}/api/orders/${id}/notify`);
+      alert('Notificación reenviada.');
+    } catch (e) {
+      console.error(e);
+      alert('No se pudo reenviar la notificación.');
+    }
+  }
+
   async function sendPromoNow() {
     const text = prompt('Texto de promoción a enviar a todos los clientes:');
     if (!text) return;
@@ -139,13 +151,13 @@ export default function App() {
       <div style={{ padding:16 }}>
         <div className="orders-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:12 }}>
           <Section title={`Nuevas (${grouped.new.length})`}>
-            {grouped.new.map(o => <OrderCard key={o.id} order={o} onChangeStatus={onChangeStatus} onDelete={onDelete} />)}
+            {grouped.new.map(o => <OrderCard key={o.id} order={{...o, _onResend: onResend}} onChangeStatus={onChangeStatus} onDelete={onDelete} />)}
           </Section>
           <Section title={`Preparando (${grouped.preparing.length})`}>
-            {grouped.preparing.map(o => <OrderCard key={o.id} order={o} onChangeStatus={onChangeStatus} onDelete={onDelete} />)}
+            {grouped.preparing.map(o => <OrderCard key={o.id} order={{...o, _onResend: onResend}} onChangeStatus={onChangeStatus} onDelete={onDelete} />)}
           </Section>
           <Section title={`Listas (${grouped.done.length})`}>
-            {grouped.done.map(o => <OrderCard key={o.id} order={o} onChangeStatus={onChangeStatus} onDelete={onDelete} />)}
+            {grouped.done.map(o => <OrderCard key={o.id} order={{...o, _onResend: onResend}} onChangeStatus={onChangeStatus} onDelete={onDelete} />)}
           </Section>
         </div>
       </div>

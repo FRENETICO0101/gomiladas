@@ -5,6 +5,7 @@ import { config } from '../config.js';
 import { sendPromotionToAll } from '../scheduler.js';
 import { genOrderId } from '../ids.js';
 import { getClient } from '../whatsappBot.js';
+import { normalizePhone } from '../utils/phone.js';
 
 export const api = express.Router();
 
@@ -29,12 +30,13 @@ api.post('/orders', async (req, res) => {
     if (!p.customer || !p.customer.phone || !Array.isArray(p.items) || p.items.length === 0) {
       return res.status(400).json({ error: 'customer{ name, phone } and items[] required' });
     }
+    const phoneNorm = normalizePhone(p.customer.phone, config.WHATSAPP_COUNTRY_CODE);
     const total = (p.items || []).reduce((acc, it) => acc + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
     const order = {
       id: (p.id && String(p.id).toUpperCase()) || genOrderId(),
       status: 'new',
       createdAt: new Date().toISOString(),
-      customer: { id: p.customer.id, name: p.customer.name, phone: p.customer.phone },
+      customer: { id: p.customer.id, name: p.customer.name, phone: phoneNorm || p.customer.phone },
       items: p.items,
       total,
       note: p.note,
@@ -58,7 +60,7 @@ api.post('/orders/:id/status', async (req, res) => {
     if (status === 'done' && updated?.customer?.phone) {
       const client = getClient();
       if (client) {
-        const digits = String(updated.customer.phone).replace(/\D/g, '');
+        const digits = normalizePhone(updated.customer.phone, config.WHATSAPP_COUNTRY_CODE);
         const chatId = `${digits}@c.us`;
         const customerName = updated.customer.name || 'cliente';
         const totalTxt = typeof updated.total === 'number' ? ` — Total: $${updated.total.toFixed(2)}` : '';
@@ -73,6 +75,28 @@ api.post('/orders/:id/status', async (req, res) => {
     res.json(updated);
   } catch (e) {
     res.status(404).json({ error: e.message });
+  }
+});
+
+// Manual resend of ready notification
+api.post('/orders/:id/notify', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const list = await ordersRepo.list();
+    const ord = list.find(o => o.id === id);
+    if (!ord) return res.status(404).json({ error: 'Order not found' });
+    if (!ord?.customer?.phone) return res.status(400).json({ error: 'Order has no customer phone' });
+    const client = getClient();
+    if (!client) return res.status(503).json({ error: 'WhatsApp client not ready' });
+    const digits = normalizePhone(ord.customer.phone, config.WHATSAPP_COUNTRY_CODE);
+    const chatId = `${digits}@c.us`;
+    const name = ord.customer.name || 'cliente';
+    const totalTxt = typeof ord.total === 'number' ? ` — Total: $${ord.total.toFixed(2)}` : '';
+    const text = `Hola ${name}, tu pedido #${ord.id} está listo${totalTxt}.\nResponde este mensaje para coordinar la entrega.`;
+    await client.sendMessage(chatId, text);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
