@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-
-const API_HOST = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-const API_PROTOCOL = typeof window !== 'undefined' ? window.location.protocol : 'http:';
-const API_URL = `${API_PROTOCOL}//${API_HOST}:3001`;
+// Use same-origin API base so it works behind Nginx/HTTPS. In dev, Vite proxy or direct server handles routing.
+const API_BASE = '';
 
 function Button({ children, onClick, selected }) {
   return (
@@ -37,8 +35,13 @@ export default function OrderPage() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await axios.get(`${API_URL}/api/menu`);
-      setMenu(data);
+      try {
+        const { data } = await axios.get(`${API_BASE}/api/menu`);
+        setMenu(data);
+      } catch (e) {
+        console.error('Error cargando menú:', e);
+        setMenu({ categories: [], chamoyOptions: [] });
+      }
     })();
   }, []);
 
@@ -88,7 +91,7 @@ export default function OrderPage() {
         items: cart,
         note: undefined,
       };
-      const { data } = await axios.post(`${API_URL}/api/orders`, payload);
+  const { data } = await axios.post(`${API_BASE}/api/orders`, payload);
       alert(`Pedido recibido #${data.id}. ¡Gracias!`);
       // reset
       setCart([]);

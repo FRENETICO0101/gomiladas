@@ -1,11 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
-
-// Usa el mismo host que sirve el panel, pero puerto 3001 para el API
-const API_HOST = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-const API_PROTOCOL = typeof window !== 'undefined' ? window.location.protocol : 'http:';
-const API_URL = `${API_PROTOCOL}//${API_HOST}:3001`;
+// Producción: usar mismo origen para API y WS detrás de Nginx/Cloudflare. En dev, Vite proxy.
+const API_BASE = '';
 
 function Section({ title, children }) {
   return (
@@ -87,11 +84,11 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await axios.get(`${API_URL}/api/orders`);
+      const { data } = await axios.get(`${API_BASE}/api/orders`);
       setOrders(data);
     })();
 
-  const s = io(API_URL, { transports: ['websocket'] });
+  const s = io(undefined, { transports: ['websocket'] });
     s.on('orders:update', evt => {
       setOrders(prev => {
         if (evt.type === 'created') {
@@ -114,20 +111,20 @@ export default function App() {
   }), [orders]);
 
   async function onChangeStatus(id, status) {
-    await axios.post(`${API_URL}/api/orders/${id}/status`, { status });
+    await axios.post(`${API_BASE}/api/orders/${id}/status`, { status });
     // actual state will update via socket
   }
 
   async function onDelete(id) {
     if (!confirm('¿Eliminar esta orden? Esta acción no se puede deshacer.')) return;
-    await axios.delete(`${API_URL}/api/orders/${id}`);
+    await axios.delete(`${API_BASE}/api/orders/${id}`);
     setOrders(prev => prev.filter(o => o.id !== id));
   }
 
   async function sendPromoNow() {
     const text = prompt('Texto de promoción a enviar a todos los clientes:');
     if (!text) return;
-    await axios.post(`${API_URL}/api/promotions/send-now`, { text });
+    await axios.post(`${API_BASE}/api/promotions/send-now`, { text });
     alert('Promoción enviada.');
   }
 

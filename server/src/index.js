@@ -36,6 +36,10 @@ async function main() {
   app.use(express.static(distDir));
   // History API fallback for SPA routes like /order
   app.get(['/', '/order', '/order/*'], (req, res) => {
+    // Prevent caching of HTML to avoid serving stale bundles via Cloudflare/browser
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.sendFile(path.join(distDir, 'index.html'));
   });
 

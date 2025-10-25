@@ -68,21 +68,44 @@ pm2 save
 pm2 startup | sed -n '1,200p'
 
 echo "[7/7] Configuring Nginx and SSL for $DOMAIN ..."
-cat >/etc/nginx/sites-available/gomitas <<NGINX
-server {
-  server_name $DOMAIN;
+NGINX_CONF_TARGET=""
+if [[ -d "/etc/nginx/sites-available" ]]; then
+  NGINX_CONF_TARGET="/etc/nginx/sites-available/gomitas"
+else
+  NGINX_CONF_TARGET="/etc/nginx/conf.d/pedido.conf"
+fi
 
+cat >"$NGINX_CONF_TARGET" <<'NGINX'
+server {
+  server_name ${DOMAIN};
+
+  # Reverse proxy to Node app
   location / {
     proxy_pass http://127.0.0.1:3001;
+    proxy_http_version 1.1;
+
+    # WebSocket support (Socket.IO)
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+
+    # Standard headers
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+
+    # Reasonable timeouts for WS
+    proxy_read_timeout 75s;
+    proxy_send_timeout 75s;
+    proxy_connect_timeout 75s;
   }
 }
 NGINX
 
-ln -sf /etc/nginx/sites-available/gomitas /etc/nginx/sites-enabled/gomitas
+if [[ "$NGINX_CONF_TARGET" == "/etc/nginx/sites-available/gomitas" ]]; then
+  ln -sf /etc/nginx/sites-available/gomitas /etc/nginx/sites-enabled/gomitas
+fi
+
 nginx -t && systemctl reload nginx
 
 if ! command -v certbot >/dev/null 2>&1; then
