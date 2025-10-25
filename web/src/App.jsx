@@ -64,16 +64,12 @@ function OrderCard({ order, onChangeStatus, onDelete }) {
       </div>
       {typeof order.total === 'number' && <div style={{ fontWeight:600 }}>Total: ${order.total.toFixed(2)}</div>}
       {order.note && <div style={{ fontSize:12, color:'#9fb2bf' }}>Nota: {order.note}</div>}
-      <div style={{ display:'flex', gap:6, marginTop:8 }}>
-        {order.status !== 'done' ? (
-          <>
-            {order.status !== 'new' && <button onClick={() => onChangeStatus(order.id, 'new')}>Nuevo</button>}
-            {order.status !== 'preparing' && <button onClick={() => onChangeStatus(order.id, 'preparing')}>Preparando</button>}
-            {order.status !== 'done' && <button onClick={() => onChangeStatus(order.id, 'done')}>Listo</button>}
-            {/* Reenviar notificación manualmente (visible siempre) */}
-            <button onClick={() => order._onResend?.(order.id)} title="Reenviar notificación por WhatsApp">Reenviar aviso</button>
-          </>
-        ) : (
+      <div style={{ display:'flex', gap:6, marginTop:8, flexWrap:'wrap' }}>
+        {order.status !== 'new' && <button onClick={() => onChangeStatus(order.id, 'new')}>Nuevo</button>}
+        {order.status !== 'preparing' && <button onClick={() => onChangeStatus(order.id, 'preparing')}>Preparando</button>}
+        {order.status !== 'done' && <button onClick={() => onChangeStatus(order.id, 'done')}>Listo</button>}
+        <button onClick={() => order._onResend?.(order.id)} title="Reenviar notificación por WhatsApp">Reenviar aviso</button>
+        {order.status === 'done' && (
           <button onClick={() => onDelete(order.id)} style={{ background:'#3a1f1f', borderColor:'#5a2a2a' }}>Eliminar</button>
         )}
       </div>
