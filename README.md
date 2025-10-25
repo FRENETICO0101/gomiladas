@@ -1,147 +1,119 @@
-# Asistente de Órdenes de Gomitas
+# Gomiladas – Pedido por WhatsApp (Self‑hosted)
 
-Solución rápida y funcional para capturar pedidos desde WhatsApp Business, gestionarlos en un panel visual en tiempo real y enviar promociones automatizadas. Toda la solución es gratuita y auto-contenida.
+Sistema completo y auto‑hospedado para tomar pedidos por WhatsApp, con panel en tiempo real, promociones automáticas y flujo de cliente por link público.
+
+- Cliente pide por link: `https://<tu-dominio>/order`
+- Panel del negocio: `https://<tu-dominio>/` (protegido con Basic Auth en Nginx)
+- Bot de WhatsApp: responde “hola/menu/ayuda” con el link y notifica al cliente cuando su pedido está listo.
 
 ## Arquitectura
 
-- Cliente: WhatsApp Business (número vinculado)
-- Bot: whatsapp-web.js (Node.js)
-- API: Express + Socket.IO
-- Base de datos ligera: Archivos JSON (sin dependencias nativas)
-- Panel web: React + Vite
-- Automatización: node-cron (y webhooks para n8n opcional)
+- Backend: Node.js + Express + Socket.IO + whatsapp-web.js (sesión persistente con LocalAuth)
+- Frontend: React + Vite (SPA servida por Express en producción)
+- Reverse proxy: Nginx + Let’s Encrypt (vía Certbot), detrás de Cloudflare (Full strict)
+- Persistencia: Archivos JSON en `server/data/`
+  - `orders.json` – pedidos
+  - `customers.json` – clientes
+  - `.wwebjs_auth/` – sesión del bot de WhatsApp
 
-Ruta de datos:
-WhatsApp → Bot → API/DB → Socket.IO → Panel Web → (n8n opcional) → Promos
+## Flujo clave: Listo → WhatsApp → coordinación por chat
 
-## Requisitos previos
-- Node.js 18+ instalado
-- WhatsApp Business en tu teléfono para enlazar sesión por QR
+- Cuando el negocio cambia el estado del pedido a “Listo” (status `done`):
+  - La API envía automáticamente un WhatsApp al cliente:
+    - Texto: `Hola <nombre>, tu pedido #<id> está listo — Total: $<monto>.\nResponde este mensaje para coordinar la entrega. ¡Gracias por tu compra!`
+  - En el panel existe un botón “Reenviar aviso” por si necesitas reenviarlo manualmente.
+- La coordinación se realiza directamente en ese chat de WhatsApp entre el cliente y el número del negocio.
 
-## Puesta en marcha
+## Variables de entorno claves
 
-1) Instalar dependencias
+- `PUBLIC_BASE_URL` – URL pública base (ej. `https://pedido.gomiladas.com`)
+- `PUBLIC_ORDER_URL` – URL directa para el cliente (opcional; por defecto `<PUBLIC_BASE_URL>/order`)
+- `WHATSAPP_COUNTRY_CODE` – Código de país para normalizar teléfonos (por defecto `52` para MX)
+- `DATA_DIR` – Carpeta de datos (por defecto `server/data`)
+- `HALLOWEEN_ENABLED` – Muestra/oculta categorías estacionales (true/false)
 
-- Servidor
-```cmd
-cd server
-npm install
+## Despliegue (resumen)
+
+1) VPS (Ubuntu) con Node 18+, Nginx y PM2. Construye el front y levanta el server en `:3001`.
+2) Nginx: proxy `443 → 127.0.0.1:3001` con cabeceras de WebSocket.
+3) Certificado SSL con Certbot. Cloudflare en modo proxy “Full (strict)”.
+4) Inicia con PM2 (ejemplo):
+
+```bash
+# desde el directorio del proyecto en el VPS
+export PUBLIC_BASE_URL="https://tu-dominio" \
+       WHATSAPP_COUNTRY_CODE=52
+pm2 start server/src/index.js --name gomitas --update-env
+pm2 save
 ```
 
-- Panel web
-```cmd
-cd ..\web
-npm install
-```
+Notas:
+- La primera vez, abre el panel y escanea el QR de WhatsApp (sesión queda en `server/data/.wwebjs_auth`).
+- En producción, Express sirve el build de Vite desde `web/dist`.
 
-2) Arrancar los servicios (en dos terminales)
+## Seguridad del panel
 
-- Servidor (muestra QR en consola la primera vez)
-```cmd
-cd server
-npm run dev
-```
-
-- Panel web
-```cmd
-cd web
-npm run dev
-```
-
-3) Vincular WhatsApp
-- En la consola del servidor se mostrará un QR ASCII. En WhatsApp: Configuración → Dispositivos vinculados → Vincular un dispositivo.
-- Tras vincular, los mensajes entrantes se procesarán automáticamente.
-
-4) Abrir el panel
-- Vite indicará la URL (por defecto http://localhost:5173). Verás las órdenes nuevas en tiempo real.
-
-## Personalización del Menú y Flujo
-- Edita `server/src/menu.js` para definir categorías, productos y alias de palabras clave.
-- El bot responde a mensajes con palabras del menú y crea órdenes simples automáticamente.
-- Puedes afinar el parser en `server/src/parsers.js`.
-
-### Cómo hacer el pedido express (una sola línea)
-Haz tu pedido escribiendo una frase. El bot detecta la presentación (enchiladas/ahogadas), el producto, la cantidad y, si aplica, los sabores de chamoy.
-
-- Enchiladas (sin chamoy):
-  - Formato: `enchiladas [producto] [cantidad]`
-  - Ejemplos: `enchiladas panditas 2`, `enchiladas aros de durazno 3`
-
-- Ahogadas (con chamoy):
-  - Formato: `ahogadas [producto] [cantidad] [chamoy1,chamoy2,...]`
-  - Ejemplos: `ahogadas xtremes 3 fresa,cereza,normal`, `ahogadas skittles 2 fresa`
-  - Consejos:
-    - Si envías 1 chamoy y pides varias piezas, se aplica a todas (ej. `ahogadas xtremes 3 fresa`).
-    - Si no indicas chamoy, el bot te lo pedirá por pieza: “(1 de N) … (N de N)”.
-    - Los chamoys se separan por comas (puedes escribir sin acentos).
-
-Comandos útiles del chat:
-- `menu` / `hola` (ver opciones, no vacía el carrito)
-- `ver` (mostrar carrito)
-- `finalizar` (pre-confirmación)
-- `confirmar` (crear la orden)
-- `quitar 1 xtremes` (remueve cantidad del último ítem que coincide)
-- `vaciar carrito` (limpia el carrito)
-- `cancelar` (descarta todo)
+- Nginx protege `GET /` y rutas admin con Basic Auth.
+- Público: `/order`, `/assets`, `/favicon.ico`, `GET /api/menu`, `POST /api/orders`.
 
 ## Endpoints principales
-- GET `http://localhost:3001/api/orders`
-- POST `http://localhost:3001/api/orders/:id/status` body: `{"status":"preparing|done"}`
-- POST `http://localhost:3001/api/promotions/send-now` body: `{"text":"Promoción..."}`
-- Webhooks (n8n):
-  - POST `http://localhost:3001/webhook/order` → crea orden vía JSON
-  - POST `http://localhost:3001/webhook/promo` → dispara promoción inmediata
 
-## Integración con n8n (opcional)
-- Ejecuta n8n local (Docker o binario). Crea un flujo con un nodo Webhook apuntando a `/webhook/order` y/o `/webhook/promo`.
-- Ejemplo de payload para orden:
-```json
-{
-  "customer": {"name":"Ana","phone":"5215555555555"},
-  "items": [{"name":"Gomita Ácida","quantity":2}],
-  "note": "Sin chile"
-}
+- Público
+  - `GET /api/menu`
+  - `POST /api/orders` – crea pedido (normaliza teléfono a JID válido de WhatsApp)
+- Panel/Admin
+  - `GET /api/orders` – lista pedidos
+  - `POST /api/orders/:id/status` – cambia estado (al pasar a `done` envía WhatsApp)
+  - `POST /api/orders/:id/notify` – reenvía manualmente el aviso “Listo”
+  - `DELETE /api/orders/:id` – elimina pedidos en estado `done`
+
+## Scripts de mantenimiento
+
+Ubicación: `scripts/`
+
+- Backup de datos (y depuración de backups >14 días)
+
+```bash
+bash scripts/backup.sh
 ```
 
-## Programación de promociones
-- Configura `PROMO_CRON` en `.env` o usa el endpoint `send-now`.
-- Por defecto hay un ejemplo semanal los lunes a las 12:00.
+- Purgar pedidos antiguos (status `done`) – por defecto 30 días
 
-## Temporadas (Halloween)
-- Para mostrar/ocultar el apartado "🎃 Especial Halloween" en el menú, usa la variable de entorno:
-
-```cmd
-set HALLOWEEN_ENABLED=false
+```bash
+node scripts/purge-orders.js --days 30
+# simulación sin escribir cambios
+node scripts/purge-orders.js --days 60 --dry-run
 ```
 
-Vuelve a iniciar el servidor para aplicar el cambio.
+- Exportar pedidos a CSV
 
-## Ver el panel en móvil o tablet (misma red Wi‑Fi)
-1) Arranca backend y panel en tu PC
-  - Servidor API/WhatsApp: puerto 3001
-  - Panel (Vite): puerto 5173
-2) Asegúrate de que el panel escuchará en la red local (ya configurado en `web/vite.config.js` con `host: true`).
-3) Obtén la IP de tu PC (Windows):
-  - Abre cmd y ejecuta: `ipconfig`
-  - Copia tu “Dirección IPv4” (ej. 192.168.1.50)
-4) En el móvil/tablet conectado a la misma Wi‑Fi, abre:
-  - Panel: `http://<IPv4>:5173` (ej. http://192.168.1.50:5173)
-  - El panel ya hablará con el backend en `http://<IPv4>:3001` automáticamente.
-5) Si no abre:
-  - Desactiva VPNs.
-  - Permite a Node.js a través del Firewall de Windows cuando te lo pida.
-  - Verifica que los puertos 5173 y 3001 no estén bloqueados.
+```bash
+# a stdout
+node scripts/export-csv.js > orders.csv
+# a archivo con ruta
+node scripts/export-csv.js --out exports/orders-$(date +%Y%m%d).csv
+```
 
-## Archivos de datos
-- `server/data/orders.json`
-- `server/data/customers.json`
-- `server/data/settings.json`
+Sugerencia: agenda estas tareas con `cron` (ej. backup diario y purga semanal).
 
-## Notas de seguridad
-- Esta solución es local y pensada para operación en un equipo del negocio.
-- No expongas el puerto del servidor en internet sin medidas adicionales.
+## Operación diaria
 
-## Próximos pasos sugeridos
-- Arrastrar/soltar de columnas en el panel.
-- Autenticación básica para el panel.
-- Reportes y métricas.
+- Panel en `https://<tu-dominio>/` (credenciales Basic Auth en Nginx)
+- Vista de cliente en `https://<tu-dominio>/order`
+- Cambia estado a “Listo” para disparar la notificación por WhatsApp.
+- Usa “Reenviar aviso” si el cliente no recibió o perdió el mensaje.
+
+## Solución de problemas
+
+- El bot no envía mensajes: verifica en PM2 logs que el cliente de WhatsApp esté “ready” y vuelve a escanear el QR si es necesario.
+- El cliente ve “Cargando menú…”: asegúrate de que el front consuma `/api/*` en el mismo origen (sin `:3001`), y limpia cachés si cambiaste el build.
+- HTTPS/Cloudflare: si ves 521/522, valida DNS, que Nginx escuche 443, y renueva el certificado.
+
+## Estructura de datos
+
+- `server/data/orders.json`: array de objetos `{ id, status, createdAt, customer{ name, phone }, items[], total }`
+- `server/data/customers.json`: clientes; el teléfono se normaliza a formato válido para WhatsApp (MX produce `521XXXXXXXXXX`).
+
+## Licencia
+
+Uso interno del negocio. Ajusta y despliega bajo tu propio VPS.

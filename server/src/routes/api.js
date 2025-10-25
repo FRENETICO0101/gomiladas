@@ -92,7 +92,7 @@ api.post('/orders/:id/notify', async (req, res) => {
     const chatId = `${digits}@c.us`;
     const name = ord.customer.name || 'cliente';
     const totalTxt = typeof ord.total === 'number' ? ` — Total: $${ord.total.toFixed(2)}` : '';
-    const text = `Hola ${name}, tu pedido #${ord.id} está listo${totalTxt}.\nResponde este mensaje para coordinar la entrega.`;
+  const text = `Hola ${name}, tu pedido #${ord.id} está listo${totalTxt}.\nResponde este mensaje para coordinar la entrega. ¡Gracias por tu compra!`;
     await client.sendMessage(chatId, text);
     res.json({ ok: true });
   } catch (e) {
