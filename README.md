@@ -98,11 +98,17 @@ Sugerencia: agenda estas tareas con `cron` (ej. backup diario y purga semanal).
 
 ## Operación diaria
 
-<<<<<<< HEAD
 - Panel en `https://<tu-dominio>/` (credenciales Basic Auth en Nginx)
 - Vista de cliente en `https://<tu-dominio>/order`
 - Cambia estado a “Listo” para disparar la notificación por WhatsApp.
 - Usa “Reenviar aviso” si el cliente no recibió o perdió el mensaje.
+
+### Logo del panel
+
+- Para mostrar tu propio logo en el encabezado:
+  - Opción 1 (simple): coloca `web/public/logo.png` y recompila el front.
+  - Opción 2: define `VITE_LOGO_URL` al construir el front, apuntando a la URL de tu logo.
+- Si la imagen no carga, se mostrará el ícono de 🍬 como respaldo.
 
 ## Solución de problemas
 
@@ -118,9 +124,3 @@ Sugerencia: agenda estas tareas con `cron` (ej. backup diario y purga semanal).
 ## Licencia
 
 Uso interno del negocio. Ajusta y despliega bajo tu propio VPS.
-=======
-## Próximos pasos 
-- Arrastrar/soltar de columnas en el panel.
-- Autenticación básica para el panel.
-- Reportes y métricas.
->>>>>>> a7edd812dc077eac36f9e098db4d34e552ff5c65

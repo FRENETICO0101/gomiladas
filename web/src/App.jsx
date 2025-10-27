@@ -3,6 +3,7 @@ import axios from 'axios';
 import { io } from 'socket.io-client';
 // Producción: usar mismo origen para API y WS detrás de Nginx/Cloudflare. En dev, Vite proxy.
 const API_BASE = '';
+const LOGO_SRC = import.meta.env.VITE_LOGO_URL || '/logo.png';
 
 function Section({ title, children }) {
   return (
@@ -83,6 +84,7 @@ function OrderCard({ order, onChangeStatus, onDelete }) {
 
 export default function App() {
   const [orders, setOrders] = useState([]);
+  const [logoOk, setLogoOk] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -143,7 +145,19 @@ export default function App() {
   return (
     <div>
       <header>
-        <div className="brand">🍬 Panel de Órdenes — Gomitas</div>
+        <div className="brand">
+          {logoOk ? (
+            <img
+              src={LOGO_SRC}
+              alt="Logo"
+              onError={() => setLogoOk(false)}
+              style={{ height: 24, width: 'auto', marginRight: 8, verticalAlign: 'middle' }}
+            />
+          ) : (
+            <span style={{ marginRight: 8 }}>🍬</span>
+          )}
+          <span>Panel de Órdenes — Gomitas</span>
+        </div>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={sendPromoNow}>Enviar promoción</button>
         </div>
@@ -164,6 +178,8 @@ export default function App() {
       <style>{`
         button { background:#1b2330; color:#cfe3ee; border:1px solid #2a3647; border-radius:6px; padding:6px 10px; cursor:pointer; }
         button:hover { background:#223043; }
+        header { display:flex; align-items:center; justify-content:space-between; padding: 10px 16px; }
+        .brand { display:flex; align-items:center; font-weight:600; }
         @media (max-width: 1024px) {
           .orders-grid { grid-template-columns: 1fr; }
         }
