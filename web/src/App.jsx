@@ -65,6 +65,8 @@ function OrderCard({ order, onChangeStatus, onDelete }) {
       {typeof order.total === 'number' && <div style={{ fontWeight:600 }}>Total: ${order.total.toFixed(2)}</div>}
       {order.note && <div style={{ fontSize:12, color:'#9fb2bf' }}>Nota: {order.note}</div>}
       <div style={{ display:'flex', gap:6, marginTop:8, flexWrap:'wrap' }}>
+									
+			
         {order.status !== 'new' && <button onClick={() => onChangeStatus(order.id, 'new')}>Nuevo</button>}
         {order.status !== 'preparing' && <button onClick={() => onChangeStatus(order.id, 'preparing')}>Preparando</button>}
         {order.status !== 'done' && <button onClick={() => onChangeStatus(order.id, 'done')}>Listo</button>}
