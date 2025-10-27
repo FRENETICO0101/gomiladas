@@ -117,6 +117,7 @@ async function tryExpressOrder(msg, name, from) {
 }
 
 let client;
+let clientReady = false;
 let ioRef = null;
 
 export function getClient() {
@@ -124,6 +125,8 @@ export function getClient() {
 }
 
 export function attachIO(io) { ioRef = io; }
+
+export function isClientReady() { return clientReady; }
 
 export function initBot() {
   client = new Client({
@@ -139,7 +142,18 @@ export function initBot() {
   });
 
   client.on('ready', () => {
+    clientReady = true;
     console.log('🤖 Bot listo y conectado a WhatsApp');
+  });
+
+  client.on('disconnected', (reason) => {
+    clientReady = false;
+    console.warn('WhatsApp cliente desconectado:', reason);
+  });
+
+  client.on('auth_failure', (msg) => {
+    clientReady = false;
+    console.error('Fallo de autenticación de WhatsApp:', msg);
   });
 
   client.on('message', async msg => {

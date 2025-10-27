@@ -4,10 +4,15 @@ import { menu } from '../menu.js';
 import { config } from '../config.js';
 import { sendPromotionToAll } from '../scheduler.js';
 import { genOrderId } from '../ids.js';
-import { getClient } from '../whatsappBot.js';
+import { getClient, isClientReady } from '../whatsappBot.js';
 import { normalizePhone } from '../utils/phone.js';
 
 export const api = express.Router();
+
+// Bot status for diagnostics
+api.get('/bot-status', (req, res) => {
+  res.json({ ready: isClientReady() });
+});
 
 api.get('/orders', async (req, res) => {
   const orders = await ordersRepo.list();
@@ -67,6 +72,7 @@ api.post('/orders/:id/status', async (req, res) => {
         const text = `Hola ${customerName}, tu pedido #${updated.id} está listo${totalTxt}.\nResponde este mensaje para coordinar la entrega. ¡Gracias por tu compra!`;
         try {
           await client.sendMessage(chatId, text);
+          console.log(`WhatsApp: notificación enviada a ${chatId} para pedido #${updated.id}`);
         } catch (e) {
           console.error('No se pudo notificar por WhatsApp:', e?.message || e);
         }
@@ -93,7 +99,8 @@ api.post('/orders/:id/notify', async (req, res) => {
     const name = ord.customer.name || 'cliente';
     const totalTxt = typeof ord.total === 'number' ? ` — Total: $${ord.total.toFixed(2)}` : '';
   const text = `Hola ${name}, tu pedido #${ord.id} está listo${totalTxt}.\nResponde este mensaje para coordinar la entrega. ¡Gracias por tu compra!`;
-    await client.sendMessage(chatId, text);
+  await client.sendMessage(chatId, text);
+  console.log(`WhatsApp: reenvío de notificación a ${chatId} para pedido #${id}`);
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
