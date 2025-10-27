@@ -141,7 +141,7 @@ Vuelve a iniciar el servidor para aplicar el cambio.
 - Esta solución es local y pensada para operación en un equipo del negocio.
 - No expongas el puerto del servidor en internet sin medidas adicionales.
 
-## Próximos pasos sugeridos
+## Próximos pasos 
 - Arrastrar/soltar de columnas en el panel.
 - Autenticación básica para el panel.
 - Reportes y métricas.
