@@ -150,13 +150,13 @@ export default function App() {
             <img
               src={LOGO_SRC}
               alt="Logo"
+              className="brand-logo"
               onError={() => setLogoOk(false)}
-              style={{ height: 24, width: 'auto', marginRight: 8, verticalAlign: 'middle' }}
             />
           ) : (
-            <span style={{ marginRight: 8 }}>🍬</span>
+            <span className="brand-logo-fallback" aria-label="logo">🍬</span>
           )}
-          <span>Panel de Órdenes — Gomitas</span>
+          <span className="brand-title">Panel de Órdenes — Gomitas</span>
         </div>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={sendPromoNow}>Enviar promoción</button>
@@ -180,8 +180,14 @@ export default function App() {
         button:hover { background:#223043; }
         header { display:flex; align-items:center; justify-content:space-between; padding: 10px 16px; }
         .brand { display:flex; align-items:center; font-weight:600; }
+        .brand-logo { height:36px; max-height:40px; width:auto; margin-right:10px; object-fit:contain; display:block; }
+        .brand-logo-fallback { display:inline-block; margin-right:10px; font-size:24px; line-height:1; }
+        .brand-title { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         @media (max-width: 1024px) {
           .orders-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px) {
+          .brand-logo { height:28px; max-height:32px; margin-right:8px; }
         }
       `}</style>
     </div>
