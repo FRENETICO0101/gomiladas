@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 // Use same-origin API base so it works behind Nginx/HTTPS. In dev, Vite proxy or direct server handles routing.
 const API_BASE = '';
+const LOGO_SRC = import.meta.env.VITE_LOGO_URL || '/logo.png';
 
 function Button({ children, onClick, selected }) {
   return (
@@ -24,6 +25,7 @@ function Qty({ value, onChange }) {
 
 export default function OrderPage() {
   const [menu, setMenu] = useState(null);
+  const [logoOk, setLogoOk] = useState(true);
   const [presentation, setPresentation] = useState('enchiladas'); // 'enchiladas' | 'ahogadas'
   const [categoryIdx, setCategoryIdx] = useState(0);
   const [productIdx, setProductIdx] = useState(null);
@@ -109,7 +111,20 @@ export default function OrderPage() {
   return (
     <div style={{ padding: 16, color:'#e6f2f8', background:'#0a1016', minHeight:'100vh' }}>
       <div style={{ maxWidth: 520, margin:'0 auto' }}>
-        <h2 style={{ margin:'8px 0 12px' }}>🛒 Haz tu pedido</h2>
+        <div className="brand" style={{ display:'flex', alignItems:'center', margin:'8px 0 12px' }}>
+          {logoOk ? (
+            <img
+              src={LOGO_SRC}
+              alt="Logo"
+              className="brand-logo"
+              onError={() => setLogoOk(false)}
+              style={{ height:36, width:'auto', marginRight:10, objectFit:'contain', display:'block' }}
+            />
+          ) : (
+            <span className="brand-logo-fallback" aria-label="logo" style={{ marginRight:10, fontSize:24, lineHeight:1 }}>🍬</span>
+          )}
+          <h2 style={{ margin:0 }}>Haz tu pedido</h2>
+        </div>
         <div style={{ background:'#0f1720', border:'1px solid #1b2330', borderRadius:12, padding:12, marginBottom:12 }}>
           <div style={{ fontSize:13, color:'#9db2c0', marginBottom:8 }}>Presentación</div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
@@ -205,6 +220,9 @@ export default function OrderPage() {
         body { margin:0; }
         button { background:#1b2330; color:#cfe3ee; border:1px solid #2a3647; border-radius:8px; padding:8px 12px; cursor:pointer; }
         button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .brand-logo { height:36px; max-height:40px; width:auto; margin-right:10px; object-fit:contain; display:block; }
+        .brand-logo-fallback { display:inline-block; margin-right:10px; font-size:24px; line-height:1; }
+        @media (max-width: 600px) { .brand-logo { height:28px; max-height:32px; margin-right:8px; } }
       `}</style>
     </div>
   );

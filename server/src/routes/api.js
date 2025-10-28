@@ -49,6 +49,34 @@ api.post('/orders', async (req, res) => {
     };
     await ordersRepo.create(order);
     req.app.get('io').emit('orders:update', { type: 'created', order });
+    // Fire-and-forget WhatsApp confirmation to the customer
+    try {
+      const client = getClient();
+      if (client && isClientReady() && order?.customer?.phone) {
+        const digits = normalizePhone(order.customer.phone, config.WHATSAPP_COUNTRY_CODE);
+        if (digits && digits.length >= 11) {
+          const chatId = `${digits}@c.us`;
+          const name = order.customer.name || 'cliente';
+          const itemsLines = (order.items || []).map(it => {
+            const qty = Number(it.quantity) || 1;
+            const pres = it.type === 'ahogadas' ? `Ahogadas${it.weight ? ` ${it.weight}` : ''}${it.chamoy ? `, ${it.chamoy}` : ''}` : `Enchiladas${it.weight ? ` ${it.weight}` : ''}`;
+            return `• ${qty} x ${it.name} (${pres})`;
+          }).join('\n');
+          const totalTxt = typeof order.total === 'number' ? `$${order.total.toFixed(2)}` : 'N/D';
+          const text = `¡Hola ${name}! 🙌\n`+
+            `Recibimos tu pedido #${order.id}.\n\n`+
+            `Detalle:\n${itemsLines}\n\n`+
+            `Total: ${totalTxt}\n\n`+
+            `Te avisaremos por este chat cuando esté listo. ¡Gracias por elegirnos! 🍬`;
+          // no await to avoid delaying response
+          client.sendMessage(chatId, text)
+            .then(() => console.log(`WhatsApp: confirmación enviada a ${chatId} para pedido #${order.id}`))
+            .catch(e => console.error('No se pudo enviar confirmación por WhatsApp:', e?.message || e));
+        }
+      }
+    } catch (e) {
+      console.error('Error preparando confirmación WhatsApp:', e?.message || e);
+    }
     res.json(order);
   } catch (e) {
     res.status(500).json({ error: e.message });
