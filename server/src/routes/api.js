@@ -4,7 +4,7 @@ import { menu } from '../menu.js';
 import { config } from '../config.js';
 import { sendPromotionToAll } from '../scheduler.js';
 import { genOrderId } from '../ids.js';
-import { getClient, isClientReady } from '../whatsappBot.js';
+import { getClient, isClientReady, enterHandoff } from '../whatsappBot.js';
 import { normalizePhone } from '../utils/phone.js';
 
 export const api = express.Router();
@@ -101,6 +101,8 @@ api.post('/orders/:id/status', async (req, res) => {
         try {
           await client.sendMessage(chatId, text);
           console.log(`WhatsApp: notificación enviada a ${chatId} para pedido #${updated.id}`);
+          // Entrar en modo coordinación: silencia respuestas automáticas en este chat
+          if (digits) enterHandoff(digits, { orderId: updated.id, reason: 'ready' });
         } catch (e) {
           console.error('No se pudo notificar por WhatsApp:', e?.message || e);
         }
@@ -129,6 +131,8 @@ api.post('/orders/:id/notify', async (req, res) => {
   const text = `Hola ${name}, tu pedido #${ord.id} está listo${totalTxt}.\nResponde este mensaje para coordinar la entrega. ¡Gracias por tu compra!`;
   await client.sendMessage(chatId, text);
   console.log(`WhatsApp: reenvío de notificación a ${chatId} para pedido #${id}`);
+  // Asegura modo coordinación también en reenvíos
+  if (digits) enterHandoff(digits, { orderId: id, reason: 'manual-ready' });
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });

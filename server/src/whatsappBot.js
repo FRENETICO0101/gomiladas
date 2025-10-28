@@ -5,7 +5,7 @@ import { menu, formatMainMenu, formatPresentations, formatItems, formatChamoy } 
 import { config } from './config.js';
 import { ordersRepo } from './stores/orders.js';
 import { genOrderId } from './ids.js';
-import { getSession, resetSession, setSession, addToCart, cartTotal, clearCart, cartItemCount } from './sessions.js';
+import { getSession, resetSession, setSession, addToCart, cartTotal, clearCart, cartItemCount, enableHandoff, isHandoff, disableHandoff } from './sessions.js';
 import { normalize } from './parsers.js';
 import path from 'path';
 
@@ -166,6 +166,18 @@ export function initBot() {
       const lower = text.toLowerCase();
 
       const s = getSession(from);
+      const inHandoff = !!(s.handoff && s.handoff.active);
+
+      // En modo coordinación (handoff) no respondemos automáticamente para no interrumpir la conversación humana.
+      // Si el cliente escribe "menu" o similar, salimos de handoff y seguimos el flujo normal.
+      if (inHandoff) {
+        if (['menu','menú','nuevo pedido','hacer pedido','pedido'].some(k => lower.includes(k))) {
+          disableHandoff(from);
+          // continuar para procesar como si no hubiera handoff
+        } else {
+          return; // silencio total en coordinación
+        }
+      }
 
       // Comandos globales (no resetean el carrito, solo el estado de navegación)
       if (['hola','buenas','hello','hi','menu','menú','ayuda'].some(k => lower === k || lower.startsWith(k))) {
@@ -349,4 +361,13 @@ ${url}`);
   });
 
   client.initialize();
+}
+
+// Exponer función para entrar/salir de handoff desde otras partes (cuando el pedido está listo)
+export function enterHandoff(phone, meta = {}) {
+  enableHandoff(phone, meta);
+}
+
+export function exitHandoff(phone) {
+  disableHandoff(phone);
 }

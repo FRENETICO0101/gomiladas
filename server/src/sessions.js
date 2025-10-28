@@ -1,5 +1,5 @@
 // Sesiones en memoria para construir carrito paso a paso
-// Estructura de session: { state, catIdx, presIdx, pendingItem: { idx, quantity }, cart: [ { name, price, quantity, presentation, weight, type, chamoy? } ] }
+// Estructura de session: { state, catIdx, presIdx, pendingItem: { idx, quantity }, cart: [ { name, price, quantity, presentation, weight, type, chamoy? } ], handoff?: { active: boolean, since: number, orderId?: string, reason?: string } }
 
 const sessions = new Map(); // key: phone
 
@@ -11,7 +11,7 @@ export function getSession(phone) {
 }
 
 export function resetSession(phone) {
-  sessions.set(phone, { state: 'idle', cart: [] });
+  sessions.set(phone, { state: 'idle', cart: [], handoff: undefined });
 }
 
 export function setSession(phone, data) {
@@ -38,4 +38,20 @@ export function clearCart(phone) {
 
 export function cartItemCount(cart) {
   return (cart || []).reduce((n, it) => n + (it.quantity || 0), 0);
+}
+
+// Coordinación manual (handoff): silencia respuestas automáticas mientras el negocio coordina entrega
+export function enableHandoff(phone, meta = {}) {
+  const s = getSession(phone);
+  s.handoff = { active: true, since: Date.now(), ...meta };
+}
+
+export function isHandoff(phone) {
+  const s = getSession(phone);
+  return !!(s.handoff && s.handoff.active);
+}
+
+export function disableHandoff(phone) {
+  const s = getSession(phone);
+  if (s.handoff) s.handoff.active = false;
 }
