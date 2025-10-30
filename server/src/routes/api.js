@@ -4,7 +4,7 @@ import { menu } from '../menu.js';
 import { config } from '../config.js';
 import { sendPromotionToAll } from '../scheduler.js';
 import { genOrderId } from '../ids.js';
-import { getClient, isClientReady, enterHandoff } from '../whatsappBot.js';
+import { getClient, isClientReady, enterHandoff, exitHandoff } from '../whatsappBot.js';
 import { normalizePhone } from '../utils/phone.js';
 
 export const api = express.Router();
@@ -67,7 +67,9 @@ api.post('/orders', async (req, res) => {
             `Recibimos tu pedido #${order.id}.\n\n`+
             `Detalle:\n${itemsLines}\n\n`+
             `Total: ${totalTxt}\n\n`+
-            `Te avisaremos por este chat cuando esté listo. ¡Gracias por elegirnos! 🍬`;
+            `Te avisaremos por este chat cuando esté listo.\n`+
+            `Cuando recibas tu pedido, responde "fin" o "terminar" para cerrar tu pedido.\n`+
+            `¡Gracias por elegirnos! 🍬`;
           // no await to avoid delaying response
           client.sendMessage(chatId, text)
             .then(() => console.log(`WhatsApp: confirmación enviada a ${chatId} para pedido #${order.id}`))
@@ -85,8 +87,8 @@ api.post('/orders', async (req, res) => {
 
 api.post('/orders/:id/status', async (req, res) => {
   try {
-    const { status } = req.body || {};
-    if (!['new', 'preparing', 'done'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  const { status } = req.body || {};
+  if (!['new', 'preparing', 'done', 'delivered'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
     const updated = await ordersRepo.updateStatus(req.params.id, status);
     req.app.get('io').emit('orders:update', { type: 'updated', order: updated });
     // Notify customer via WhatsApp when the order is ready
@@ -97,7 +99,10 @@ api.post('/orders/:id/status', async (req, res) => {
         const chatId = `${digits}@c.us`;
         const customerName = updated.customer.name || 'cliente';
         const totalTxt = typeof updated.total === 'number' ? ` — Total: $${updated.total.toFixed(2)}` : '';
-        const text = `Hola ${customerName}, tu pedido #${updated.id} está listo${totalTxt}.\nResponde este mensaje para coordinar la entrega. ¡Gracias por tu compra!`;
+        const text = `Hola ${customerName}, tu pedido #${updated.id} está listo${totalTxt}.\n`+
+          `Responde este mensaje para coordinar la entrega.\n`+
+          `Cuando recibas tu pedido, responde "fin" o "terminar" para cerrar tu pedido.\n`+
+          `¡Gracias por tu compra!`;
         try {
           await client.sendMessage(chatId, text);
           console.log(`WhatsApp: notificación enviada a ${chatId} para pedido #${updated.id}`);
@@ -105,6 +110,25 @@ api.post('/orders/:id/status', async (req, res) => {
           if (digits) enterHandoff(digits, { orderId: updated.id, reason: 'ready' });
         } catch (e) {
           console.error('No se pudo notificar por WhatsApp:', e?.message || e);
+        }
+      }
+    }
+    // Notify customer when marked as delivered (manual from panel)
+    if (status === 'delivered' && updated?.customer?.phone) {
+      const client = getClient();
+      if (client) {
+        const digits = normalizePhone(updated.customer.phone, config.WHATSAPP_COUNTRY_CODE);
+        const chatId = `${digits}@c.us`;
+        const customerName = updated.customer.name || 'cliente';
+        const url = config.PUBLIC_ORDER_URL || 'http://localhost:3001/order';
+        const text = `¡Gracias, ${customerName}! Entregamos tu pedido #${updated.id}.\n`+
+          `Para hacer un nuevo pedido, escribe "menu" o usa: ${url}`;
+        try {
+          await client.sendMessage(chatId, text);
+          // Salir de coordinación si estaba activa
+          if (digits) exitHandoff(digits);
+        } catch (e) {
+          console.error('No se pudo notificar entrega por WhatsApp:', e?.message || e);
         }
       }
     }
@@ -128,7 +152,10 @@ api.post('/orders/:id/notify', async (req, res) => {
     const chatId = `${digits}@c.us`;
     const name = ord.customer.name || 'cliente';
     const totalTxt = typeof ord.total === 'number' ? ` — Total: $${ord.total.toFixed(2)}` : '';
-  const text = `Hola ${name}, tu pedido #${ord.id} está listo${totalTxt}.\nResponde este mensaje para coordinar la entrega. ¡Gracias por tu compra!`;
+  const text = `Hola ${name}, tu pedido #${ord.id} está listo${totalTxt}.\n`+
+    `Responde este mensaje para coordinar la entrega.\n`+
+    `Cuando recibas tu pedido, responde "fin" o "terminar" para cerrar tu pedido.\n`+
+    `¡Gracias por tu compra!`;
   await client.sendMessage(chatId, text);
   console.log(`WhatsApp: reenvío de notificación a ${chatId} para pedido #${id}`);
   // Asegura modo coordinación también en reenvíos

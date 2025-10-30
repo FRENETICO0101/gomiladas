@@ -67,10 +67,11 @@ function OrderCard({ order, onChangeStatus, onDelete }) {
       {order.note && <div style={{ fontSize:12, color:'#9fb2bf' }}>Nota: {order.note}</div>}
       <div style={{ display:'flex', gap:6, marginTop:8, flexWrap:'wrap' }}>
 									
-			
+
         {order.status !== 'new' && <button onClick={() => onChangeStatus(order.id, 'new')}>Nuevo</button>}
         {order.status !== 'preparing' && <button onClick={() => onChangeStatus(order.id, 'preparing')}>Preparando</button>}
         {order.status !== 'done' && <button onClick={() => onChangeStatus(order.id, 'done')}>Listo</button>}
+        {order.status !== 'delivered' && <button onClick={() => onChangeStatus(order.id, 'delivered')}>Entregado</button>}
         {order.status === 'done' && (
           <>
             <button onClick={() => order._onResend?.(order.id)} title="Reenviar notificación por WhatsApp">Reenviar aviso</button>
@@ -112,6 +113,7 @@ export default function App() {
     new: orders.filter(o => o.status === 'new'),
     preparing: orders.filter(o => o.status === 'preparing'),
     done: orders.filter(o => o.status === 'done'),
+    delivered: orders.filter(o => o.status === 'delivered'),
   }), [orders]);
 
   async function onChangeStatus(id, status) {
@@ -163,7 +165,7 @@ export default function App() {
         </div>
       </header>
       <div style={{ padding:16 }}>
-        <div className="orders-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:12 }}>
+        <div className="orders-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:12 }}>
           <Section title={`Nuevas (${grouped.new.length})`}>
             {grouped.new.map(o => <OrderCard key={o.id} order={{...o, _onResend: onResend}} onChangeStatus={onChangeStatus} onDelete={onDelete} />)}
           </Section>
@@ -172,6 +174,9 @@ export default function App() {
           </Section>
           <Section title={`Listas (${grouped.done.length})`}>
             {grouped.done.map(o => <OrderCard key={o.id} order={{...o, _onResend: onResend}} onChangeStatus={onChangeStatus} onDelete={onDelete} />)}
+          </Section>
+          <Section title={`Entregados (${grouped.delivered.length})`}>
+            {grouped.delivered.map(o => <OrderCard key={o.id} order={{...o, _onResend: onResend}} onChangeStatus={onChangeStatus} onDelete={onDelete} />)}
           </Section>
         </div>
       </div>

@@ -171,7 +171,24 @@ export function initBot() {
       // En modo coordinación (handoff) no respondemos automáticamente para no interrumpir la conversación humana.
       // Si el cliente escribe "menu" o similar, salimos de handoff y seguimos el flujo normal.
       if (inHandoff) {
-        if (['menu','menú','nuevo pedido','hacer pedido','pedido'].some(k => lower.includes(k))) {
+        // Cerrar coordinación manualmente
+          // Exit handoff explicitly and mark order delivered if known
+          if (['fin', 'terminar'].includes(lower)) {
+            try {
+              const orderId = s?.handoff?.orderId;
+              if (orderId) {
+                const order = await ordersRepo.updateStatus(orderId, 'delivered');
+                if (ioRef) ioRef.emit('orders:update', { type: 'updated', order });
+              }
+            } catch (e) {
+              console.error('Error marcando como entregado desde handoff:', e?.message || e);
+            }
+            exitHandoff(from);
+            await msg.reply(`¡Gracias por tu compra! Marcamos tu pedido como entregado.\nPara un nuevo pedido, escribe "menu" o abre: ${config.PUBLIC_ORDER_URL}`);
+            return;
+          }
+        // Reanudar flujo de pedidos (sale de handoff y permite seguir con el bot)
+        if (['menu','menú','nuevo pedido','hacer pedido','pedido'].some(k => lower === k || lower.includes(k))) {
           disableHandoff(from);
           // continuar para procesar como si no hubiera handoff
         } else {
