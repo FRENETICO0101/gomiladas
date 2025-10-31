@@ -65,10 +65,9 @@ api.post('/orders', async (req, res) => {
           const totalTxt = typeof order.total === 'number' ? `$${order.total.toFixed(2)}` : 'N/D';
           const text = `¡Hola ${name}! 🙌\n`+
             `Recibimos tu pedido #${order.id}.\n\n`+
-            `Detalle:\n${itemsLines}\n\n`+
+            `Detalle:\n\n${itemsLines}\n\n`+
             `Total: ${totalTxt}\n\n`+
-            `Te avisaremos por este chat cuando esté listo.\n`+
-            `Cuando recibas tu pedido, responde "fin" o "terminar" para cerrar tu pedido.\n`+
+            `Te avisaremos por este chat cuando esté listo.\n\n`+
             `¡Gracias por elegirnos! 🍬`;
           // no await to avoid delaying response
           client.sendMessage(chatId, text)
@@ -103,8 +102,7 @@ api.post('/orders/:id/status', async (req, res) => {
           `¿Deseas programar la entrega?\n\n`+
           `🕐 Opciones:\n`+
           `1️⃣ Programar entrega\n\n`+
-          `Escribe "1" o "Programar entrega" y te atendemos por aquí.\n`+
-          `Cuando recibas tu pedido, responde "fin" o "terminar" para marcarlo como entregado.`;
+          `Escribe "1" o "Programar entrega" y te atendemos por aquí.`;
         try {
           await client.sendMessage(chatId, text);
           console.log(`WhatsApp: notificación enviada a ${chatId} para pedido #${updated.id}`);
@@ -154,12 +152,11 @@ api.post('/orders/:id/notify', async (req, res) => {
     const chatId = `${digits}@c.us`;
     const name = ord.customer.name || 'cliente';
     const totalTxt = typeof ord.total === 'number' ? ` — Total: $${ord.total.toFixed(2)}` : '';
-  const text = `🍭 ¡Tu pedido está listo, ${name}!${totalTxt}\n\n`+
+  const text = `🍭 ¡Tu pedido está listo, ${name}!\n\n${totalTxt}\n\n`+
     `¿Deseas programar la entrega?\n\n`+
     `🕐 Opciones:\n`+
     `1️⃣ Programar entrega\n\n`+
-    `Escribe "1" o "Programar entrega" y te atendemos por aquí.\n`+
-    `Cuando recibas tu pedido, responde "fin" o "terminar" para marcarlo como entregado.`;
+    `Escribe "1" o "Programar entrega" y te atendemos por aquí.`;
   await client.sendMessage(chatId, text);
   console.log(`WhatsApp: reenvío de notificación a ${chatId} para pedido #${id}`);
   // Asegura modo coordinación también en reenvíos

@@ -189,7 +189,7 @@ export function initBot() {
           }
         // Acknowledgment for scheduling while keeping handoff active
         if (lower === '1' || lower.includes('programar entrega')) {
-          await msg.reply('¡Perfecto! Coordinamos por aquí. Un asesor te atenderá en breve.');
+          await msg.reply('¡Perfecto! Coordinamos por aquí. Un asesor te atenderá en breve.\n\n`Cuando recibas tu pedido, responde "fin" o "terminar" para marcarlo como entregado.`');
           return;
         }
         // Reanudar flujo de pedidos (sale de handoff y permite seguir con el bot)
@@ -205,8 +205,8 @@ export function initBot() {
       if (['hola','buenas','hello','hi','menu','menú','ayuda'].some(k => lower === k || lower.startsWith(k))) {
         const url = config.PUBLIC_ORDER_URL || 'http://localhost:3001/order';
         await msg.reply(`🍬 ¡Hola! Soy Gommibot, tu asistente para pedir las gomitas más ricas 😋\n\n`+
-          `Para hacer tu pedido, por favor entra al siguiente enlace y selecciona tus productos:\n`+
-          `� Haz tu pedido aquí: ${url}`);
+          `Para hacer tu pedido, por favor entra al siguiente enlace y selecciona tus productos:\n\n`+
+          `👉 Haz tu pedido aquí: ${url}`);
         return;
       }
 
