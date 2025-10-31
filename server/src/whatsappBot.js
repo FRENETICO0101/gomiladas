@@ -187,6 +187,11 @@ export function initBot() {
             await msg.reply(`¡Gracias por tu compra! Marcamos tu pedido como entregado.\nPara un nuevo pedido, escribe "menu" o abre: ${config.PUBLIC_ORDER_URL}`);
             return;
           }
+        // Acknowledgment for scheduling while keeping handoff active
+        if (lower === '1' || lower.includes('programar entrega')) {
+          await msg.reply('¡Perfecto! Coordinamos por aquí. Un asesor te atenderá en breve.');
+          return;
+        }
         // Reanudar flujo de pedidos (sale de handoff y permite seguir con el bot)
         if (['menu','menú','nuevo pedido','hacer pedido','pedido'].some(k => lower === k || lower.includes(k))) {
           disableHandoff(from);
@@ -198,11 +203,35 @@ export function initBot() {
 
       // Comandos globales (no resetean el carrito, solo el estado de navegación)
       if (['hola','buenas','hello','hi','menu','menú','ayuda'].some(k => lower === k || lower.startsWith(k))) {
-        // Responder SOLO con el enlace a la tienda para crear la orden
         const url = config.PUBLIC_ORDER_URL || 'http://localhost:3001/order';
-        await msg.reply(`🛒 Haz tu pedido aquí:
-${url}`);
-        // No cambiar el estado ni mostrar más texto
+        await msg.reply(`🍬 ¡Hola! Soy Gommibot, tu asistente para pedir las gomitas más ricas 😋\n\n`+
+          `Para hacer tu pedido, por favor entra al siguiente enlace y selecciona tus productos:\n`+
+          `� Haz tu pedido aquí: ${url}`);
+        return;
+      }
+
+      // Activar coordinación si el cliente escribe Programar entrega
+      if (lower === '1' || lower.includes('programar entrega')) {
+        enableHandoff(from, { reason: 'customer-request' });
+        await msg.reply('¡Perfecto! Coordinamos por aquí. Un asesor te atenderá en breve.');
+        return;
+      }
+
+      // Calificación 1–5 ("calificar 4" o solo "4")
+      const rateMatch = lower.match(/^calificar\s*([1-5])$/) || lower.match(/^([1-5])$/);
+      if (rateMatch) {
+        const rating = parseInt(rateMatch[1], 10);
+        try {
+          const all = await ordersRepo.list();
+          const candidate = all.find(o => o.customer?.phone === from && o.status === 'delivered' && !o.rating);
+          if (candidate) {
+            const updated = await ordersRepo.update(candidate.id, { rating, ratingAt: new Date().toISOString() });
+            if (ioRef) ioRef.emit('orders:update', { type: 'updated', order: updated });
+          }
+          await msg.reply('¡Gracias por tu calificación! 🙌');
+        } catch (e) {
+          console.error('Error guardando calificación:', e?.message || e);
+        }
         return;
       }
       if (lower === 'vaciar carrito' || lower === 'vaciar') {

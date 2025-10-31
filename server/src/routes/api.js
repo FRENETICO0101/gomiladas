@@ -99,10 +99,12 @@ api.post('/orders/:id/status', async (req, res) => {
         const chatId = `${digits}@c.us`;
         const customerName = updated.customer.name || 'cliente';
         const totalTxt = typeof updated.total === 'number' ? ` — Total: $${updated.total.toFixed(2)}` : '';
-        const text = `Hola ${customerName}, tu pedido #${updated.id} está listo${totalTxt}.\n`+
-          `Responde este mensaje para coordinar la entrega.\n`+
-          `Cuando recibas tu pedido, responde "fin" o "terminar" para cerrar tu pedido.\n`+
-          `¡Gracias por tu compra!`;
+        const text = `🍭 ¡Tu pedido está listo, ${customerName}!${totalTxt}\n\n`+
+          `¿Deseas programar la entrega?\n\n`+
+          `🕐 Opciones:\n`+
+          `1️⃣ Programar entrega\n\n`+
+          `Escribe "1" o "Programar entrega" y te atendemos por aquí.\n`+
+          `Cuando recibas tu pedido, responde "fin" o "terminar" para marcarlo como entregado.`;
         try {
           await client.sendMessage(chatId, text);
           console.log(`WhatsApp: notificación enviada a ${chatId} para pedido #${updated.id}`);
@@ -152,10 +154,12 @@ api.post('/orders/:id/notify', async (req, res) => {
     const chatId = `${digits}@c.us`;
     const name = ord.customer.name || 'cliente';
     const totalTxt = typeof ord.total === 'number' ? ` — Total: $${ord.total.toFixed(2)}` : '';
-  const text = `Hola ${name}, tu pedido #${ord.id} está listo${totalTxt}.\n`+
-    `Responde este mensaje para coordinar la entrega.\n`+
-    `Cuando recibas tu pedido, responde "fin" o "terminar" para cerrar tu pedido.\n`+
-    `¡Gracias por tu compra!`;
+  const text = `🍭 ¡Tu pedido está listo, ${name}!${totalTxt}\n\n`+
+    `¿Deseas programar la entrega?\n\n`+
+    `🕐 Opciones:\n`+
+    `1️⃣ Programar entrega\n\n`+
+    `Escribe "1" o "Programar entrega" y te atendemos por aquí.\n`+
+    `Cuando recibas tu pedido, responde "fin" o "terminar" para marcarlo como entregado.`;
   await client.sendMessage(chatId, text);
   console.log(`WhatsApp: reenvío de notificación a ${chatId} para pedido #${id}`);
   // Asegura modo coordinación también en reenvíos

@@ -42,8 +42,23 @@ export const ordersRepo = {
       const orders = await ordersStore.read();
       const idx = orders.findIndex(o => o.id === id);
       if (idx === -1) throw new Error('Order not found');
+      const nowIso = new Date().toISOString();
       orders[idx].status = status;
-      orders[idx].updatedAt = new Date().toISOString();
+      orders[idx].updatedAt = nowIso;
+      if (status === 'delivered' && !orders[idx].deliveredAt) {
+        orders[idx].deliveredAt = nowIso;
+      }
+      await ordersStore.write(orders);
+      return orders[idx];
+    });
+  },
+
+  async update(id, patch) {
+    return ordersStore.queue(async () => {
+      const orders = await ordersStore.read();
+      const idx = orders.findIndex(o => o.id === id);
+      if (idx === -1) throw new Error('Order not found');
+      orders[idx] = { ...orders[idx], ...patch, updatedAt: new Date().toISOString() };
       await ordersStore.write(orders);
       return orders[idx];
     });
