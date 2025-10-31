@@ -121,7 +121,7 @@ api.post('/orders/:id/status', async (req, res) => {
         const chatId = `${digits}@c.us`;
         const customerName = updated.customer.name || 'cliente';
         const url = config.PUBLIC_ORDER_URL || 'http://localhost:3001/order';
-        const text = `¡Gracias, ${customerName}! Entregamos tu pedido #${updated.id}.\n`+
+        const text = `¡Gracias, ${customerName}! Entregamos tu pedido #${updated.id}.\n\n`+
           `Para hacer un nuevo pedido, escribe "menu" o usa: ${url}`;
         try {
           await client.sendMessage(chatId, text);
