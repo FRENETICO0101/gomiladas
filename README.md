@@ -1,4 +1,4 @@
-# Gomiladas – Pedido por WhatsApp (Self‑hosted)
+# Dashboard – Pedido por WhatsApp (Self‑hosted)
 
 Sistema completo y auto‑hospedado para tomar pedidos por WhatsApp, con panel en tiempo real, promociones automáticas y flujo de cliente por link público.
 
